@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Station Rollout Tracker</title>
+<style>
+:root{--bg:#eef2ee;--panel:#fafcfa;--ink:#16231c;--mute:#5a6b61;--line:#cbd6cd;--ok:#1d8a5a;--warn:#d99a00;--bad:#c8321e;--sel:#16231c;--selt:#fafcfa}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1913;--panel:#17251d;--ink:#e6efe8;--mute:#93a79a;--line:#2b4033;--ok:#4cc58a;--warn:#f0b429;--bad:#ff6a50;--sel:#e6efe8;--selt:#16231c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:18px 14px 40px}h1{margin:0 0 4px;font-size:clamp(26px,5vw,38px);line-height:1.1}h2{font-size:16px;margin:14px 0 6px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:12px}.warn{border-left:5px solid var(--warn)}
+.sub,.note{color:var(--mute);font-size:13px}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+button,select,input{font:inherit;color:inherit}button.t,button.b{background:transparent;border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+button[aria-pressed=true]{background:var(--sel);color:var(--selt);border-color:var(--sel)}:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:8px 0}.k div{border-left:3px solid var(--line);padding-left:10px}.k small{display:block;color:var(--mute);font-size:12px}.k b{font-size:26px}
+.w{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mute);font-weight:600}
+.s{font-weight:700}.On{color:var(--ok)}.At{color:var(--warn)}.Es{color:var(--bad)}.bar{display:inline-block;height:8px;border-radius:4px;background:var(--ok)}
+pre{background:var(--bg);padding:10px;border-radius:6px;overflow-x:auto;font-size:12px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+label{font-size:13px;display:block}input[type=number]{width:100%;padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+@media print{.tabs,.np,.warn{display:none}body{background:#fff;color:#000}.card{border:0}}
+</style></head><body><main>
+<h1>EV Station Rollout Tracker</h1>
+<p class="sub">A program-management toolkit for rolling out EVs across last-mile delivery stations: station dashboard, charging governance and a weekly review.</p>
+<section class="card warn"><b>Synthetic data.</b> Stations, volumes, costs and plans are invented for this demo. This is an independent project, not Amazon data. Weights, thresholds and rates are my assumptions.</section>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div id="v"></div>
+</main>
+<script>
+const WEEK=6,areas=['Indiranagar','Whitefield','HSR','Koramangala','Yelahanka','Jayanagar','Electronic City','Marathahalli','Hebbal','Banashankari','Bellandur','Rajajinagar'];
+const rnd=(s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296})(7);
+const cl=(x,a,b)=>Math.max(a,Math.min(b,x)),f=n=>Math.round(n).toLocaleString('en-IN');
+const S=[];areas.forEach(a=>{for(let i=1;i<=4;i++){const o=Math.round(800+rnd()*2200),km=Math.round(40+rnd()*70),ch=+(.3+rnd()*.7).toFixed(2),ds=+(.3+rnd()*.7).toFixed(2),tg=Math.round(40+rnd()*30),plan=tg*WEEK/12,ev=Math.max(0,Math.round(plan*(.55+.5*(ch+ds)/2+(rnd()-.5)*.25)));
+const fit=km<=70?1:Math.max(0,(110-km)/40),score=Math.round(100*(.35*(o-800)/2200+.25*fit+.2*ch+.2*ds)),gap=Math.round(plan-ev),st=gap>=8?'Escalate':gap>=4?'At risk':'On track';
+S.push({n:`${a.slice(0,3).toUpperCase()}-${i}`,a,o,km,ch,ds,tg,plan:Math.round(plan),ev,gap,score,st})}});
+const cls=s=>s==='Escalate'?'Es':s==='At risk'?'At':'On';
+const tot=S.reduce((s,x)=>s+x.o,0),evAvg=S.reduce((s,x)=>s+x.o*x.ev,0)/tot,planAvg=S.reduce((s,x)=>s+x.o*x.plan,0)/tot,cnt=k=>S.filter(x=>x.st===k).length;
+const RACI=[['Site audit','R','A','I','C','C','I'],['Charger installation','A','C','I','R','R','C'],['Power load approval','A','I','','C','R','C'],['DSP vehicle onboarding','A','C','R','I','','C'],['Charging SOP compliance','A','R','R','R','C',''],['Cost recovery and billing','A','I','C','R','I','R'],['Weekly review','R','C','C','C','I','I']];
+const ROLES=['Program mgr','Station mgr','DSP partner','Charging partner','Facilities','Legal'];
+const SOP=['Confirm sanctioned power load and safe charger location','Install signage, fire safety kit and bay markings','Log each charger with ID, owner and commissioning date','Train station staff and riders on safe charging','Run weekly charger uptime and incident check','Raise any blocker in the tracker with owner and due date'];
+const ISS=[['Power load not sanctioned','HSR-2','Facilities',9,7],['Charger offline, spare part pending','WHI-1','Charging partner',5,3],['DSP riders not onboarded to EVs','YEL-3','DSP partner',12,10],['Billing dispute on tariff','KOR-4','Legal',4,7],['No bay markings or signage','BEL-1','Station mgr',2,5],['Charger count below plan','HEB-2','Charging partner',8,7],['Rider training pending','MAR-3','Station mgr',6,7],['Fire safety kit missing','ELE-2','Facilities',3,3]];
+const T=['Dashboard','Governance','Weekly review','Method'];let tab=0,filt='All';
+function dash(){const r=S.filter(x=>filt==='All'||x.st===filt).sort((a,b)=>b.score-a.score);
+return`<div class="card"><div class="k"><div><small>Fleet EV share (order-weighted)</small><b>${evAvg.toFixed(1)}%</b></div><div><small>Plan for week ${WEEK}</small><b>${planAvg.toFixed(1)}%</b></div><div><small>On track</small><b class="On">${cnt('On track')}</b></div><div><small>At risk</small><b class="At">${cnt('At risk')}</b></div><div><small>Escalate</small><b class="Es">${cnt('Escalate')}</b></div></div>
+<label class="np">Show stations: <select id="fl">${['All','On track','At risk','Escalate'].map(x=>`<option ${x===filt?'selected':''}>${x}</option>`).join('')}</select></label>
+<div class="w"><table><thead><tr><th>Station</th><th>Area</th><th>Orders/day</th><th>Route km</th><th>Chargers</th><th>DSP ready</th><th>EV share</th><th>Plan now</th><th>Gap</th><th>Priority score</th><th>Status</th></tr></thead><tbody>${r.map(x=>`<tr><td>${x.n}</td><td>${x.a}</td><td>${f(x.o)}</td><td>${x.km}</td><td>${Math.round(x.ch*100)}%</td><td>${Math.round(x.ds*100)}%</td><td>${x.ev}%</td><td>${x.plan}%</td><td>${x.gap}</td><td><span class="bar" style="width:${x.score*.6}px"></span> ${x.score}</td><td class="s ${cls(x.st)}">${x.st}</td></tr>`).join('')}</tbody></table></div>
+<p class="note">Priority score (0-100) ranks where to push first: higher means more volume, a route that fits an EV's range, and chargers and partners that are ready. Status compares each station's EV share with where the plan says it should be this week: gap of 4+ points is At risk, 8+ is Escalate.</p></div>`}
+function gov(){return`<div class="card"><h2>Who does what (RACI)</h2><div class="w"><table><thead><tr><th>Activity</th>${ROLES.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${RACI.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="note">R = does the work, A = accountable, C = consulted, I = informed.</p>
+<h2>Charging SOP checklist</h2>${SOP.map((x,i)=>`<label><input type="checkbox" class="ck" data-i="${i}"> ${x}</label>`).join('')}<p class="note" id="sopn"></p>
+<h2>Site issue tracker</h2><div class="w"><table><thead><tr><th>Issue</th><th>Station</th><th>Owner</th><th>Days open</th><th>Due in (days)</th><th>Action</th></tr></thead><tbody>${ISS.map(x=>{const od=x[3]>x[4];return`<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td><td>${x[4]}</td><td class="s ${od?'Es':'On'}">${od?'Overdue: escalate to '+(x[3]-x[4]>5?'regional lead':'owner\'s manager'):'On time'}</td></tr>`}).join('')}</tbody></table></div>
+<h2>Partner charging cost recovery (assumptions)</h2><div class="g">${[['kwh','kWh per vehicle per day',8],['veh','EVs at the station',30],['tar','Energy tariff (Rs per kWh)',18],['mar','Partner margin (Rs per kWh)',2],['dsp','Share recovered from DSP (%)',50]].map(x=>`<label>${x[1]}<input type="number" id="${x[0]}" value="${x[2]}"></label>`).join('')}</div><div class="k" id="cr"></div></div>`}
+function cost(){const g=i=>+document.getElementById(i).value||0,kw=g('kwh')*g('veh')*26,c=kw*(g('tar')+g('mar')),rc=c*g('dsp')/100;document.getElementById('cr').innerHTML=`<div><small>Monthly energy (kWh)</small><b>${f(kw)}</b></div><div><small>Monthly charging cost</small><b>Rs ${f(c)}</b></div><div><small>Recovered from DSP</small><b>Rs ${f(rc)}</b></div><div><small>Net program cost</small><b>Rs ${f(c-rc)}</b></div>`}
+function wbr(){const e=S.filter(x=>x.st==='Escalate').sort((a,b)=>b.gap-a.gap).slice(0,5),late=ISS.filter(x=>x[3]>x[4]);
+return`<div class="card"><button class="b np" onclick="print()">Print or save as PDF</button><h1 style="font-size:24px;margin-top:8px">Weekly business review: week ${WEEK} of 12</h1>
+<h2>Headline</h2><p>Fleet EV share is ${evAvg.toFixed(1)}% against a plan of ${planAvg.toFixed(1)}%, a gap of ${(planAvg-evAvg).toFixed(1)} points. ${cnt('On track')} of ${S.length} stations are on track, ${cnt('At risk')} are at risk and ${cnt('Escalate')} need escalation.</p>
+<h2>Stuck stations (largest gaps)</h2><ul>${e.map(x=>`<li>${x.n} (${x.a}): ${x.ev}% vs ${x.plan}% plan, chargers ${Math.round(x.ch*100)}% ready, DSP ${Math.round(x.ds*100)}% ready.</li>`).join('')}</ul>
+<h2>Decisions needed</h2><ul><li>Approve temporary charger capacity at the ${e.filter(x=>x.ch<.6).length} escalated stations where chargers are below 60% ready.</li><li>Facilities and Legal to clear ${late.length} overdue site issues: ${late.map(x=>x[1]).join(', ')}.</li><li>Agree DSP onboarding support for stations where DSP readiness is below 60%.</li></ul>
+<h2>Next week</h2><ul><li>Close the overdue issues above or escalate to the regional lead.</li><li>Re-score all stations and re-rank the next 10 to push.</li><li>Review cost recovery with charging partners.</li></ul><p class="note">Synthetic data. Prepared from the dashboard and tracker in this toolkit.</p></div>`}
+function meth(){return`<div class="card"><h2>How it is framed (DMAIC)</h2><p>Define: raise EV share at each station to plan. Measure: EV share, charger and DSP readiness, issue age. Analyze: priority score and gap to plan. Improve: governance, escalation rules and cost recovery. Control: weekly review with owners and dates.</p>
+<h2>Priority score</h2><p>100 x (35% volume + 25% route fit + 20% charger readiness + 20% DSP readiness). Route fit is 1 up to 70 km a day and falls to 0 at 110 km, assuming a 100 km EV range with a reserve. All weights are my assumptions.</p>
+<h2>Equivalent SQL (reference; this page computes it in JavaScript)</h2><pre>SELECT station_id, area,
+  ROUND(100 * (0.35 * (orders_per_day - 800) / 2200.0
+  + 0.25 * CASE WHEN route_km &lt;= 70 THEN 1
+                ELSE GREATEST(0, (110 - route_km) / 40.0) END
+  + 0.20 * charger_ready + 0.20 * dsp_ready)) AS priority_score,
+  plan_share_now - ev_share AS gap,
+  CASE WHEN plan_share_now - ev_share &gt;= 8 THEN 'Escalate'
+       WHEN plan_share_now - ev_share &gt;= 4  THEN 'At risk'
+       ELSE 'On track' END AS status
+FROM stations ORDER BY priority_score DESC;</pre>
+<h2>Limits</h2><p>Invented data, simple rules, no real charger or partner data. Next steps with real data: station audits as inputs, observed adoption curves, and validated cost and tariff figures.</p></div>`}
+function draw(){document.getElementById('tabs').innerHTML=T.map((x,i)=>`<button class="t" aria-pressed="${i===tab}" data-t="${i}">${x}</button>`).join('');document.getElementById('v').innerHTML=[dash,gov,wbr,meth][tab]();
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=+b.dataset.t;draw()});const fl=document.getElementById('fl');if(fl)fl.onchange=e=>{filt=e.target.value;draw()};
+if(tab===1){document.querySelectorAll('.ck').forEach(c=>c.onchange=()=>{document.getElementById('sopn').textContent=document.querySelectorAll('.ck:checked').length+' of '+SOP.length+' steps done at this station'});document.querySelectorAll('#v input[type=number]').forEach(i=>i.oninput=cost);cost()}}
+draw();
+</script></body></html>
